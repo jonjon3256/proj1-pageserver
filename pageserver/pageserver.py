@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 import socket    # Basic TCP/IP communication on the internet
 import _thread   # Response computation runs concurrently with main program
+import os
 
 
 def listen(portnum):
@@ -91,8 +92,24 @@ def respond(sock):
 
     parts = request.split()
     if len(parts) > 1 and parts[0] == "GET":
-        transmit(STATUS_OK, sock)
-        transmit(CAT, sock)
+        file_path = parts[1]
+        file_split = os.path.splitext(parts[1])[0]
+        split = os.path.splitext(parts[1])[1]
+        test_run = os.getcwd()#Gets the path of the OS.
+        total_path = test_run+"/pages"+file_path#Ex: usr/Desktop/proj1-pageserver/pages/file_path
+        if "~" in file_split or "//" in file_split or ".." in file_split:
+            transmit(STATUS_FORBIDDEN,sock)
+            transmit("403 ERROR: Invalid inputs: (~,//,..)",sock)
+        else:
+            if (split == ".html" or split == ".css") and os.path.isfile(total_path):
+                file = open(total_path)
+                transmit(STATUS_OK,sock)
+                transmit(file.read(),sock)
+            else:
+                transmit(STATUS_NOT_FOUND,sock)
+                transmit("404 ERROR, the file which you are looking for was not found",sock)
+        #transmit(STATUS_OK, sock)
+        #transmit(CAT, sock)
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)
